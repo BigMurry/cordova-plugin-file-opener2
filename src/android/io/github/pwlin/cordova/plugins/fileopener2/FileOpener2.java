@@ -42,7 +42,7 @@ public class FileOpener2 extends CordovaPlugin {
 
 	/**
 	 * Executes the request and returns a boolean.
-	 * 
+	 *
 	 * @param action
 	 *            The action to execute.
 	 * @param args
@@ -53,8 +53,8 @@ public class FileOpener2 extends CordovaPlugin {
 	 */
 	public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
 		if (action.equals("open")) {
-			this._open(args.getString(0), args.getString(1), callbackContext);
-		} 
+			this._open(args.getString(0), args.getString(1), args.getString(2), callbackContext);
+		}
 		else if (action.equals("uninstall")) {
 			this._uninstall(args.getString(0), callbackContext);
 		}
@@ -79,7 +79,7 @@ public class FileOpener2 extends CordovaPlugin {
 		return true;
 	}
 
-	private void _open(String fileArg, String contentType, CallbackContext callbackContext) throws JSONException {
+	private void _open(String fileArg, String contentType, String activityFlag, CallbackContext callbackContext) throws JSONException {
 		String fileName = "";
 		try {
 			CordovaResourceApi resourceApi = webView.getResourceApi();
@@ -94,11 +94,26 @@ public class FileOpener2 extends CordovaPlugin {
 				Uri path = Uri.fromFile(file);
 				Intent intent = new Intent(Intent.ACTION_VIEW);
 				intent.setDataAndType(path, contentType);
-				intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-				/*
-				 * @see
-				 * http://stackoverflow.com/questions/14321376/open-an-activity-from-a-cordovaplugin
-				 */
+				if(activityFlag != null && activityFlag.equals("NEW")){
+					/*
+					* @see
+					* http://stackoverflow.com/questions/23718356/flag-activity-clear-top
+					*
+					* In my case, I will install an update side the app
+					* and want the original acitivy NOT influence the INSTALLATION ACTIVITY to cause
+					* unexpected close
+					*
+					*/
+					intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK);
+				}else{
+					intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
+					/*
+					* @see
+					* http://stackoverflow.com/questions/14321376/open-an-activity-from-a-cordovaplugin
+					*/
+				}
+
 				cordova.getActivity().startActivity(intent);
 				//cordova.getActivity().startActivity(Intent.createChooser(intent,"Open File in..."));
 				callbackContext.success();
@@ -115,7 +130,7 @@ public class FileOpener2 extends CordovaPlugin {
 			callbackContext.error(errorObj);
 		}
 	}
-	
+
 	private void _uninstall(String packageId, CallbackContext callbackContext) throws JSONException {
 		if (this._appIsInstalled(packageId)) {
 			Intent intent = new Intent(Intent.ACTION_UNINSTALL_PACKAGE);
@@ -130,7 +145,7 @@ public class FileOpener2 extends CordovaPlugin {
 			callbackContext.error(errorObj);
 		}
 	}
-	
+
 	private boolean _appIsInstalled(String packageId) {
 		PackageManager pm = cordova.getActivity().getPackageManager();
         boolean appInstalled = false;
